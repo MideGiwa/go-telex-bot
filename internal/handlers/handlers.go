@@ -43,8 +43,13 @@ func (h *WebhookHandler) HandleTelexWebhook(c *gin.Context) {
 	// CRITICAL: Respond with 200 OK immediately to Telex to avoid retries.
 	c.JSON(http.StatusOK, gin.H{"status": "processing"})
 
-	// Launch the actual processing in a goroutine
-	go h.processWebhookEvent(context.Background(), event)
+	// Launch the actual processing in a goroutine with a timeout context
+	// This ensures the goroutine doesn't hang indefinitely
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	go func() {
+		defer cancel()
+		h.processWebhookEvent(ctx, event)
+	}()
 }
 
 func (h *WebhookHandler) processWebhookEvent(ctx context.Context, event telex.WebhookEvent) {
@@ -55,6 +60,12 @@ func (h *WebhookHandler) processWebhookEvent(ctx context.Context, event telex.We
 		message := &event.Payload
 		if message == nil {
 			log.Println("Received message.created event with nil payload.")
+			return
+		}
+
+		// Validate message has required fields
+		if message.ID == "" || message.ChannelID == "" {
+			log.Printf("Received message.created event with missing required fields (ID: %s, ChannelID: %s)", message.ID, message.ChannelID)
 			return
 		}
 

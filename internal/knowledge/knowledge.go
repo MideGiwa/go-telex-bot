@@ -3,8 +3,8 @@ package knowledge
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -66,7 +66,7 @@ func (s *KnowledgeService) IngestText(ctx context.Context, content, sourceType, 
 
 // IngestDocumentFile reads a file and ingests its content as a document.
 func (s *KnowledgeService) IngestDocumentFile(ctx context.Context, filePath string) error {
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read document file %s: %w", filePath, err)
 	}
@@ -124,7 +124,7 @@ func (s *KnowledgeService) IngestHistoricalTelexChannelMessages(ctx context.Cont
 // ProcessDocsDirectory reads all .md files in the specified directory and ingests them.
 func (s *KnowledgeService) ProcessDocsDirectory(ctx context.Context, docsDirPath string) error {
 	log.Printf("Processing documents in directory: %s", docsDirPath)
-	files, err := ioutil.ReadDir(docsDirPath)
+	files, err := os.ReadDir(docsDirPath)
 	if err != nil {
 		return fmt.Errorf("failed to read docs directory %s: %w", docsDirPath, err)
 	}

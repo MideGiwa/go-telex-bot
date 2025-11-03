@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	gosupabase "github.com/supabase-community/supabase-go"
-	"github.com/supabase-community/supabase-go/storage"
 )
 
 // Client wraps the Supabase Go client and provides additional functionality.
@@ -65,7 +64,7 @@ func NewClient(supabaseURL, supabaseServiceKey string) (*Client, error) {
 
 // InsertKnowledgeItem inserts a new knowledge item into the knowledge_items table.
 func (c *Client) InsertKnowledgeItem(ctx context.Context, item *KnowledgeItem) error {
-	_, _, err := c.DB.From("knowledge_items").Insert(item, false, "", "", "").Execute()
+	_, _, err := c.From("knowledge_items").Insert(item, false, "", "", "").Execute()
 	if err != nil {
 		return fmt.Errorf("failed to insert knowledge item: %w", err)
 	}
@@ -94,7 +93,10 @@ func (c *Client) SearchKnowledge(ctx context.Context, queryVector []float32) ([]
 	// and to deploy with `--no-verify-jwt`, it implies we pass the service key.
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.supabaseServiceKey))
 
-	httpClient := &http.Client{}
+	// Create HTTP client with timeout that respects context
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call Supabase Edge Function: %w", err)
@@ -121,9 +123,13 @@ func (c *Client) SearchKnowledge(ctx context.Context, queryVector []float32) ([]
 
 // GetStorageClient returns a Supabase Storage client.
 // This might be useful for future expansion or if direct file storage interaction is needed.
+// Note: Removed implementation as storage package is not available in the current supabase-go version.
+// If needed in the future, this can be re-implemented when storage support is available.
+/*
 func (c *Client) GetStorageClient() *storage.Client {
 	return storage.NewClient(c.supabaseURL, c.supabaseServiceKey, nil)
 }
+*/
 
 // UpsertKnowledgeItem is a helper to either insert or update based on a unique identifier
 // (not strictly required by current schema but good for future proofing/deduplication).

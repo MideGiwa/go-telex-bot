@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -20,7 +19,8 @@ const (
 
 // GeminiClient provides methods for interacting with the Google Gemini API.
 type GeminiClient struct {
-	embeddingModel *genai.GenerativeModel
+	client          *genai.Client
+	embeddingModel  *genai.EmbeddingModel
 	generationModel *genai.GenerativeModel
 }
 
@@ -33,14 +33,15 @@ func NewGeminiClient(apiKey string) (*GeminiClient, error) {
 	}
 
 	// Initialize embedding model
-	embeddingModel := client.GenerativeModel(GeminiEmbeddingModel)
+	embeddingModel := client.EmbeddingModel(GeminiEmbeddingModel)
 
 	// Initialize generation model
 	generationModel := client.GenerativeModel(GeminiGenerationModel)
 	generationModel.SetTemperature(0.7) // Sensible default for general use
 
 	return &GeminiClient{
-		embeddingModel: embeddingModel,
+		client:          client,
+		embeddingModel:  embeddingModel,
 		generationModel: generationModel,
 	}, nil
 }
@@ -48,7 +49,7 @@ func NewGeminiClient(apiKey string) (*GeminiClient, error) {
 // EmbedContent generates a vector embedding for the given text.
 func (c *GeminiClient) EmbedContent(ctx context.Context, text string) ([]float32, error) {
 	if c.embeddingModel == nil {
-		return nil, errors.New("Gemini embedding model not initialized")
+		return nil, errors.New("gemini embedding model not initialized")
 	}
 
 	res, err := c.embeddingModel.EmbedContent(ctx, genai.Text(text))
@@ -56,18 +57,18 @@ func (c *GeminiClient) EmbedContent(ctx context.Context, text string) ([]float32
 		return nil, fmt.Errorf("failed to get embedding from Gemini: %w", err)
 	}
 
-	if res == nil || len(res.Embedding) == 0 || len(res.Embedding[0].Values) == 0 {
+	if res == nil || res.Embedding == nil || len(res.Embedding.Values) == 0 {
 		return nil, errors.New("received empty or invalid embedding from Gemini")
 	}
 
-	return res.Embedding[0].Values, nil
+	return res.Embedding.Values, nil
 }
 
 // GenerateContent generates text based on a prompt and provided context.
 // The systemInstruction is optional.
 func (c *GeminiClient) GenerateContent(ctx context.Context, systemInstruction string, prompt string) (string, error) {
 	if c.generationModel == nil {
-		return nil, errors.New("Gemini generation model not initialized")
+		return "", errors.New("gemini generation model not initialized")
 	}
 
 	model := c.generationModel
@@ -100,4 +101,12 @@ func (c *GeminiClient) GenerateContent(ctx context.Context, systemInstruction st
 	}
 
 	return fullResponse, nil
+}
+
+// Close closes the underlying Gemini client and releases resources.
+func (c *GeminiClient) Close() error {
+	if c.client != nil {
+		return c.client.Close()
+	}
+	return nil
 }

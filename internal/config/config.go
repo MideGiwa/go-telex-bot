@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -46,7 +47,8 @@ func getEnv(key string) string {
 	if value == "" {
 		log.Fatalf("Environment variable %s not set", key)
 	}
-	return value
+	// Trim whitespace to handle cases where env vars might have leading/trailing spaces
+	return strings.TrimSpace(value)
 }
 
 func validateConfig(cfg *Config) {

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +30,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize Gemini client: %v", err)
 	}
+	defer func() {
+		if err := geminiClient.Close(); err != nil {
+			log.Printf("Error closing Gemini client: %v", err)
+		}
+	}()
 	log.Println("Gemini client initialized.")
 
 	// Initialize Supabase Client
@@ -86,20 +90,4 @@ func main() {
 	}
 
 	log.Println("Server exiting")
-}
-
-// isBotMentioned checks if the bot is mentioned in the message content.
-// This is a basic implementation; more robust parsing might be needed for complex cases.
-func isBotMentioned(messageContent, botUserID string) bool {
-	// Telex often uses a format like <@U12345678> for mentions.
-	// We'll check for the bot's user ID in this format.
-	mentionString := "<@" + botUserID + ">"
-	return strings.Contains(messageContent, mentionString)
-}
-
-// cleanMention removes the bot mention from the message content.
-func cleanMention(messageContent, botUserID string) string {
-	mentionString := "<@" + botUserID + ">"
-	cleaned := strings.ReplaceAll(messageContent, mentionString, "")
-	return strings.TrimSpace(cleaned)
 }

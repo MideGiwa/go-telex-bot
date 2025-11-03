@@ -28,6 +28,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize Gemini client: %v", err)
 	}
+	defer func() {
+		if err := geminiClient.Close(); err != nil {
+			log.Printf("Error closing Gemini client: %v", err)
+		}
+	}()
 	log.Println("Gemini client initialized.")
 
 	// Initialize Supabase Client
@@ -45,7 +50,10 @@ func main() {
 	knowledgeService := knowledge.NewKnowledgeService(geminiClient, supabaseClient, telexClient, cfg.TelexBotUserID)
 	log.Println("Knowledge service initialized.")
 
-	ctx := context.Background()
+	// Create a cancellable context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var wg sync.WaitGroup
 
 	// Part 1: Ingest static .md files from the /docs folder
